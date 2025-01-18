@@ -84,8 +84,8 @@ def main():
     
     generator = PDFGenerator()
     
-    # Form Type Selection
-    form_type = st.selectbox("Select Form Type", ["1040", "schedule1", "schedule2"])
+    # Form Type Selection with unique key
+    form_type = st.selectbox("Select Form Type", ["1040", "schedule1", "schedule2"], key="form_type_selectbox")
     
     # Form Fields based on type
     with st.form(key='form_generator'):
@@ -150,9 +150,6 @@ def main():
                     
             except Exception as e:
                 st.error(f"Error generating PDF: {str(e)}")
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
