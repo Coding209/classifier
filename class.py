@@ -1,8 +1,11 @@
 import streamlit as st
+import random
 import pandas as pd
 from datetime import datetime
 import io
 import base64
+import zipfile
+import os
 
 try:
     from reportlab.pdfgen import canvas
@@ -18,7 +21,7 @@ except ImportError:
     """)
 
 class PDFGenerator:
-    def generate_pdf(self, form_data):
+    def generate_pdf(self, form_data, form_number):
         if not REPORTLAB_INSTALLED:
             st.error("Cannot generate PDF: ReportLab is not installed")
             return None
@@ -28,7 +31,7 @@ class PDFGenerator:
         
         # Common header for all forms
         c.setFont("Helvetica-Bold", 24)
-        c.drawString(50, 750, "Tax Forms")
+        c.drawString(50, 750, f"Tax Form {form_number}")
         c.setFont("Helvetica", 12)
 
         # Generate Form 1040
@@ -93,74 +96,62 @@ class PDFGenerator:
         y -= 20
         c.drawString(50, y, f"Medicare Tax: ${data['medicare_tax']:,.2f}")
 
+def generate_random_data():
+    # Generate random data for each form
+    first_name = random.choice(["John", "Jane", "Alex", "Chris", "Sam", "Taylor"])
+    last_name = random.choice(["Doe", "Smith", "Johnson", "Williams", "Brown", "Davis"])
+    ssn_last4 = random.randint(1000, 9999)
+    wages = round(random.uniform(25000, 150000), 2)
+    interest = round(random.uniform(500, 5000), 2)
+    business_income = round(random.uniform(1000, 50000), 2)
+    rental_income = round(random.uniform(1000, 20000), 2)
+    self_employment_tax = round(random.uniform(1000, 5000), 2)
+    medicare_tax = round(random.uniform(500, 2500), 2)
+
+    return {
+        "1040": {
+            "first_name": first_name,
+            "last_name": last_name,
+            "ssn_last4": ssn_last4,
+            "wages": wages,
+            "interest": interest
+        },
+        "schedule1": {
+            "business_income": business_income,
+            "rental_income": rental_income
+        },
+        "schedule2": {
+            "self_employment_tax": self_employment_tax,
+            "medicare_tax": medicare_tax
+        }
+    }
+
 def main():
-    st.title("Tax Forms PDF Generator")
+    st.title("Generate 200 Tax Forms PDF")
     
     if not REPORTLAB_INSTALLED:
         st.stop()
     
     generator = PDFGenerator()
-    
-    # Form Fields
-    with st.form(key='form_generator'):
-        # Form 1040 Fields
-        first_name = st.text_input("First Name", "John")
-        last_name = st.text_input("Last Name", "Doe")
-        ssn_last4 = st.text_input("Last 4 of SSN", "1234")
-        wages = st.number_input("Wages", value=50000.0)
-        interest = st.number_input("Interest Income", value=1000.0)
 
-        # Schedule 1 Fields
-        business_income = st.number_input("Business Income", value=10000.0)
-        rental_income = st.number_input("Rental Income", value=5000.0)
+    # Button to generate 200 PDFs
+    if st.button("Generate 200 PDFs"):
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for i in range(1, 201):
+                form_data = generate_random_data()  # Generate random data for each form
+                pdf_buffer = generator.generate_pdf(form_data, i)
+                pdf_filename = f"tax_form_{i}.pdf"
+                zip_file.writestr(pdf_filename, pdf_buffer.getvalue())
 
-        # Schedule 2 Fields
-        self_employment_tax = st.number_input("Self-Employment Tax", value=2000.0)
-        medicare_tax = st.number_input("Medicare Tax", value=1000.0)
-        
-        generate_button = st.form_submit_button("Generate PDF")
+        zip_buffer.seek(0)
+        b64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
+        zip_filename = f"tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
 
-    if generate_button:
-        # Organize data into a dictionary
-        form_data = {
-            "1040": {
-                "first_name": first_name,
-                "last_name": last_name,
-                "ssn_last4": ssn_last4,
-                "wages": wages,
-                "interest": interest
-            },
-            "schedule1": {
-                "business_income": business_income,
-                "rental_income": rental_income
-            },
-            "schedule2": {
-                "self_employment_tax": self_employment_tax,
-                "medicare_tax": medicare_tax
-            }
-        }
-
-        with st.spinner("Generating PDF..."):
-            try:
-                pdf_buffer = generator.generate_pdf(form_data)
-                if pdf_buffer:
-                    # Create download button
-                    b64_pdf = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
-                    filename = f"tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-                    
-                    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{filename}">Download PDF</a>'
-                    st.markdown(href, unsafe_allow_html=True)
-                    st.success("PDF generated successfully!")
-                    
-                    # Save metadata
-                    metadata = {
-                        "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        "filename": filename
-                    }
-                    st.json(metadata)
-                    
-            except Exception as e:
-                st.error(f"Error generating PDF: {str(e)}")
+        # Create download link for the ZIP file
+        href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download 200 PDFs</a>'
+        st.markdown(href, unsafe_allow_html=True)
+        st.success("200 PDFs generated successfully!")
 
 if __name__ == "__main__":
     main()
