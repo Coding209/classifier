@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -151,6 +150,9 @@ def main():
                     
             except Exception as e:
                 st.error(f"Error generating PDF: {str(e)}")
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
