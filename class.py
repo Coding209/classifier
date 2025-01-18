@@ -21,7 +21,7 @@ except ImportError:
     """)
 
 class PDFGenerator:
-    def generate_pdf(self, form_data, form_number):
+    def generate_pdf(self, form_data, form_number, form_type):
         if not REPORTLAB_INSTALLED:
             st.error("Cannot generate PDF: ReportLab is not installed")
             return None
@@ -31,32 +31,29 @@ class PDFGenerator:
         
         # Common header for all forms
         c.setFont("Helvetica-Bold", 24)
-        c.drawString(50, 750, f"Tax Form {form_number}")
+        c.drawString(50, 750, f"Tax Form {form_type} - {form_number}")
         c.setFont("Helvetica", 12)
 
         # Generate Form 1040
-        c.setFont("Helvetica-Bold", 18)
-        c.drawString(50, 730, "Form 1040")
-        c.setFont("Helvetica", 12)
-        self._generate_1040(c, form_data['1040'])
+        if form_type == "1040":
+            c.setFont("Helvetica-Bold", 18)
+            c.drawString(50, 730, "Form 1040")
+            c.setFont("Helvetica", 12)
+            self._generate_1040(c, form_data)
         
-        # Add page break
-        c.showPage()
-
         # Generate Schedule 1
-        c.setFont("Helvetica-Bold", 18)
-        c.drawString(50, 730, "Schedule 1")
-        c.setFont("Helvetica", 12)
-        self._generate_schedule1(c, form_data['schedule1'])
+        elif form_type == "schedule1":
+            c.setFont("Helvetica-Bold", 18)
+            c.drawString(50, 730, "Schedule 1")
+            c.setFont("Helvetica", 12)
+            self._generate_schedule1(c, form_data)
         
-        # Add page break
-        c.showPage()
-
         # Generate Schedule 2
-        c.setFont("Helvetica-Bold", 18)
-        c.drawString(50, 730, "Schedule 2")
-        c.setFont("Helvetica", 12)
-        self._generate_schedule2(c, form_data['schedule2'])
+        elif form_type == "schedule2":
+            c.setFont("Helvetica-Bold", 18)
+            c.drawString(50, 730, "Schedule 2")
+            c.setFont("Helvetica", 12)
+            self._generate_schedule2(c, form_data)
         
         c.save()
         buffer.seek(0)
@@ -127,31 +124,40 @@ def generate_random_data():
     }
 
 def main():
-    st.title("Generate 200 Tax Forms PDF")
+    st.title("Generate 50 Separate Tax Forms PDFs")
     
     if not REPORTLAB_INSTALLED:
         st.stop()
     
     generator = PDFGenerator()
 
-    # Button to generate 200 PDFs
-    if st.button("Generate 200 PDFs"):
+    # Button to generate 50 PDFs for each form
+    if st.button("Generate 50 PDFs for Each Form"):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for i in range(1, 201):
+            for i in range(1, 51):  # Generate 50 PDFs for each form
                 form_data = generate_random_data()  # Generate random data for each form
-                pdf_buffer = generator.generate_pdf(form_data, i)
-                pdf_filename = f"tax_form_{i}.pdf"
-                zip_file.writestr(pdf_filename, pdf_buffer.getvalue())
+                
+                # Generate Form 1040 PDFs
+                pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040")
+                zip_file.writestr(f"form_1040_{i}.pdf", pdf_buffer_1040.getvalue())
+                
+                # Generate Schedule 1 PDFs
+                pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1")
+                zip_file.writestr(f"schedule1_{i}.pdf", pdf_buffer_schedule1.getvalue())
+                
+                # Generate Schedule 2 PDFs
+                pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2")
+                zip_file.writestr(f"schedule2_{i}.pdf", pdf_buffer_schedule2.getvalue())
 
         zip_buffer.seek(0)
         b64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
         zip_filename = f"tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
 
         # Create download link for the ZIP file
-        href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download 200 PDFs</a>'
+        href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download 150 PDFs</a>'
         st.markdown(href, unsafe_allow_html=True)
-        st.success("200 PDFs generated successfully!")
+        st.success("50 PDFs for each form generated successfully!")
 
 if __name__ == "__main__":
     main()
