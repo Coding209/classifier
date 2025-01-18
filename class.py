@@ -1,16 +1,14 @@
 import streamlit as st
 import pandas as pd
-from PIL import Image
 import io
-import fitz  # PyMuPDF
+from PIL import Image
 import tempfile
-import os
 
 # Set page config
 st.set_page_config(page_title="Tax Form Classifier", layout="wide")
 
 class MockClassifier:
-    """Mock classifier for testing without Document AI"""
+    """Mock classifier for testing"""
     def process_document(self, content):
         # Return mock classification results
         return {
@@ -22,19 +20,6 @@ class MockClassifier:
                 {"type": "Schedule 2", "confidence": 0.02}
             ]
         }
-
-def convert_pdf_to_images(pdf_bytes):
-    """Convert PDF bytes to list of PIL Images"""
-    images = []
-    try:
-        with fitz.open(stream=pdf_bytes, filetype="pdf") as pdf:
-            for page in pdf:
-                pix = page.get_pixmap()
-                img_bytes = pix.tobytes("png")
-                images.append(Image.open(io.BytesIO(img_bytes)))
-    except Exception as e:
-        st.error(f"Error converting PDF: {str(e)}")
-    return images
 
 def main():
     st.title("Tax Form Classifier")
@@ -55,15 +40,14 @@ def main():
             
             with col1:
                 st.subheader("Document Preview")
-                pdf_bytes = uploaded_file.read()
-                images = convert_pdf_to_images(pdf_bytes)
-                
-                # Display first page
-                if images:
-                    st.image(images[0], use_column_width=True)
-                    
-                    if len(images) > 1:
-                        st.info(f"Document has {len(images)} pages. Showing first page.")
+                # Show file details instead of preview
+                file_details = {
+                    "Filename": uploaded_file.name,
+                    "FileType": uploaded_file.type,
+                    "FileSize": f"{len(uploaded_file.getvalue())/1024:.2f} KB"
+                }
+                for key, value in file_details.items():
+                    st.write(f"**{key}:** {value}")
 
             with col2:
                 st.subheader("Classification Results")
@@ -71,7 +55,7 @@ def main():
                 with st.spinner("Processing document..."):
                     try:
                         # Process document
-                        result = classifier.process_document(pdf_bytes)
+                        result = classifier.process_document(uploaded_file.getvalue())
                         
                         # Display classification results
                         st.success("Document processed successfully!")
@@ -102,7 +86,7 @@ def main():
             # Create summary table
             results = []
             for file in uploaded_files:
-                result = classifier.process_document(file.read())
+                result = classifier.process_document(file.getvalue())
                 results.append({
                     "Filename": file.name,
                     "Type": result["type"],
@@ -128,7 +112,7 @@ def main():
         👆 Upload a tax form PDF to get started!
         
         This application will:
-        - Display a preview of the document
+        - Show document details
         - Classify the document type
         - Show confidence scores
         - Provide detailed analysis
