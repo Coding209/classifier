@@ -1,95 +1,24 @@
 import streamlit as st
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-import os
 import pandas as pd
 from datetime import datetime
-import io
-import base64
+import json
 
-class TaxFormGenerator:
-    def generate_form(self, form_type, form_data):
-        """Generate a tax form based on type and data"""
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        
-        # Header
-        c.setFont("Helvetica-Bold", 16)
-        if form_type == "1040":
-            c.drawString(250, 750, "Form 1040")
-            c.setFont("Helvetica", 12)
-            c.drawString(250, 730, "U.S. Individual Income Tax Return")
-            self._add_1040_content(c, form_data)
-        elif form_type == "schedule1":
-            c.drawString(250, 750, "Schedule 1")
-            c.setFont("Helvetica", 12)
-            c.drawString(200, 730, "Additional Income and Adjustments to Income")
-            self._add_schedule1_content(c, form_data)
-        elif form_type == "schedule2":
-            c.drawString(250, 750, "Schedule 2")
-            c.setFont("Helvetica", 12)
-            c.drawString(200, 730, "Additional Taxes")
-            self._add_schedule2_content(c, form_data)
-            
-        c.save()
-        buffer.seek(0)
-        return buffer
-
-    def _add_1040_content(self, c, data):
-        """Add Form 1040 specific content"""
-        c.setFont("Helvetica", 10)
-        y_position = 700
-        
-        # Personal Information
-        c.drawString(50, y_position, f"First Name: {data.get('first_name', '')}")
-        c.drawString(300, y_position, f"Last Name: {data.get('last_name', '')}")
-        
-        y_position -= 20
-        c.drawString(50, y_position, f"SSN: XXX-XX-{data.get('ssn_last4', '')}")
-        
-        # Financial Information
-        y_position -= 40
-        c.drawString(50, y_position, "Income")
-        y_position -= 20
-        c.drawString(70, y_position, f"Wages: ${data.get('wages', '0')}")
-        y_position -= 20
-        c.drawString(70, y_position, f"Interest: ${data.get('interest', '0')}")
-
-    def _add_schedule1_content(self, c, data):
-        """Add Schedule 1 specific content"""
-        c.setFont("Helvetica", 10)
-        y_position = 700
-        
-        # Additional Income
-        c.drawString(50, y_position, "Additional Income")
-        y_position -= 20
-        c.drawString(70, y_position, f"Business Income: ${data.get('business_income', '0')}")
-        y_position -= 20
-        c.drawString(70, y_position, f"Rental Income: ${data.get('rental_income', '0')}")
-
-    def _add_schedule2_content(self, c, data):
-        """Add Schedule 2 specific content"""
-        c.setFont("Helvetica", 10)
-        y_position = 700
-        
-        # Additional Taxes
-        c.drawString(50, y_position, "Additional Taxes")
-        y_position -= 20
-        c.drawString(70, y_position, f"Self-Employment Tax: ${data.get('self_employment_tax', '0')}")
-        y_position -= 20
-        c.drawString(70, y_position, f"Additional Medicare Tax: ${data.get('medicare_tax', '0')}")
-
-def create_download_link(buffer, filename):
-    """Create a download link for the PDF"""
-    b64 = base64.b64encode(buffer.getvalue()).decode()
-    return f'<a href="data:application/pdf;base64,{b64}" download="{filename}">Download PDF</a>'
+class SimpleFormGenerator:
+    def generate_form_data(self, form_type, form_data):
+        """Generate form data in JSON format"""
+        data = {
+            "form_type": form_type,
+            "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            "data": form_data
+        }
+        return json.dumps(data, indent=2)
 
 def main():
-    st.set_page_config(page_title="Tax Form Generator", layout="wide")
-    st.title("Tax Form Generator")
+    st.set_page_config(page_title="Tax Form Data Generator", layout="wide")
+    st.title("Tax Form Data Generator")
 
-    # Initialize form generator
-    generator = TaxFormGenerator()
+    # Initialize generator
+    generator = SimpleFormGenerator()
 
     # Sidebar for batch generation
     st.sidebar.header("Batch Generation")
@@ -99,7 +28,7 @@ def main():
     tab1, tab2 = st.tabs(["Single Form", "Batch Generation"])
 
     with tab1:
-        st.header("Generate Single Form")
+        st.header("Generate Single Form Data")
         
         # Form selection
         form_type = st.selectbox(
@@ -147,18 +76,26 @@ def main():
                     "medicare_tax": medicare_tax
                 }
 
-            submit_button = st.form_submit_button("Generate Form")
+            submit_button = st.form_submit_button("Generate Form Data")
 
         if submit_button:
-            # Generate PDF
-            pdf_buffer = generator.generate_form(form_type, form_data)
+            # Generate JSON data
+            json_data = generator.generate_form_data(form_type, form_data)
             
-            # Create download button
-            filename = f"{form_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-            st.markdown(create_download_link(pdf_buffer, filename), unsafe_allow_html=True)
+            # Display generated data
+            st.subheader("Generated Form Data")
+            st.code(json_data, language='json')
+            
+            # Create download button for JSON
+            st.download_button(
+                "Download JSON",
+                json_data,
+                f"{form_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                "application/json"
+            )
             
             # Display success message
-            st.success(f"{form_type.upper()} form generated successfully!")
+            st.success(f"{form_type.upper()} form data generated successfully!")
 
     with tab2:
         st.header("Batch Generation")
@@ -167,28 +104,41 @@ def main():
             progress_bar = st.progress(0)
             status_text = st.empty()
             
-            # Create a DataFrame to store metadata
-            metadata = []
+            # Create a DataFrame to store metadata and generated data
+            all_data = []
             
             for i in range(num_forms):
                 # Generate random data
-                form_data = {
-                    "first_name": f"User{i}",
-                    "last_name": f"Sample{i}",
-                    "ssn_last4": f"{i:04d}",
-                    "wages": 50000 + i * 1000,
-                    "interest": 1000 + i * 100
-                }
-                
-                # Generate form
                 form_type = ["1040", "schedule1", "schedule2"][i % 3]
-                pdf_buffer = generator.generate_form(form_type, form_data)
                 
-                # Save metadata
-                metadata.append({
+                if form_type == "1040":
+                    form_data = {
+                        "first_name": f"User{i}",
+                        "last_name": f"Sample{i}",
+                        "ssn_last4": f"{i:04d}",
+                        "wages": 50000 + i * 1000,
+                        "interest": 1000 + i * 100
+                    }
+                elif form_type == "schedule1":
+                    form_data = {
+                        "business_income": 10000 + i * 500,
+                        "rental_income": 5000 + i * 200
+                    }
+                else:
+                    form_data = {
+                        "self_employment_tax": 2000 + i * 100,
+                        "medicare_tax": 1000 + i * 50
+                    }
+                
+                # Generate form data
+                json_data = generator.generate_form_data(form_type, form_data)
+                
+                # Save to list
+                all_data.append({
                     "form_id": i + 1,
                     "form_type": form_type,
-                    "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    "data": json_data
                 })
                 
                 # Update progress
@@ -196,26 +146,35 @@ def main():
                 progress_bar.progress(progress)
                 status_text.text(f"Generated {i + 1} of {num_forms} forms...")
             
-            # Create metadata DataFrame
-            df = pd.DataFrame(metadata)
+            # Create DataFrame
+            df = pd.DataFrame(all_data)
             
             # Display summary
             st.success(f"Generated {num_forms} forms successfully!")
             st.subheader("Generation Summary")
-            st.dataframe(df)
+            st.dataframe(df[["form_id", "form_type", "generation_date"]])
             
-            # Download metadata
-            csv = df.to_csv(index=False)
+            # Download options
+            st.subheader("Download Options")
+            
+            # Download all data as JSON
+            all_json = json.dumps(all_data, indent=2)
             st.download_button(
-                "Download Metadata",
+                "Download All Data (JSON)",
+                all_json,
+                "form_data_batch.json",
+                "application/json"
+            )
+            
+            # Download summary as CSV
+            csv = df[["form_id", "form_type", "generation_date"]].to_csv(index=False)
+            st.download_button(
+                "Download Summary (CSV)",
                 csv,
-                "form_generation_metadata.csv",
+                "form_generation_summary.csv",
                 "text/csv",
                 key='download-csv'
             )
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
