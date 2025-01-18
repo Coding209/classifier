@@ -18,7 +18,7 @@ except ImportError:
     """)
 
 class PDFGenerator:
-    def generate_pdf(self, form_type, form_data):
+    def generate_pdf(self, form_data):
         if not REPORTLAB_INSTALLED:
             st.error("Cannot generate PDF: ReportLab is not installed")
             return None
@@ -26,18 +26,35 @@ class PDFGenerator:
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
         
-        # Common header
+        # Common header for all forms
         c.setFont("Helvetica-Bold", 24)
-        c.drawString(50, 750, f"Form {form_type.upper()}")
+        c.drawString(50, 750, "Tax Forms")
         c.setFont("Helvetica", 12)
+
+        # Generate Form 1040
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(50, 730, "Form 1040")
+        c.setFont("Helvetica", 12)
+        self._generate_1040(c, form_data['1040'])
         
-        if form_type == "1040":
-            self._generate_1040(c, form_data)
-        elif form_type == "schedule1":
-            self._generate_schedule1(c, form_data)
-        elif form_type == "schedule2":
-            self._generate_schedule2(c, form_data)
-            
+        # Add page break
+        c.showPage()
+
+        # Generate Schedule 1
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(50, 730, "Schedule 1")
+        c.setFont("Helvetica", 12)
+        self._generate_schedule1(c, form_data['schedule1'])
+        
+        # Add page break
+        c.showPage()
+
+        # Generate Schedule 2
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(50, 730, "Schedule 2")
+        c.setFont("Helvetica", 12)
+        self._generate_schedule2(c, form_data['schedule2'])
+        
         c.save()
         buffer.seek(0)
         return buffer
@@ -77,64 +94,59 @@ class PDFGenerator:
         c.drawString(50, y, f"Medicare Tax: ${data['medicare_tax']:,.2f}")
 
 def main():
-    st.title("Tax Form PDF Generator")
+    st.title("Tax Forms PDF Generator")
     
     if not REPORTLAB_INSTALLED:
         st.stop()
     
     generator = PDFGenerator()
     
-    # Form Type Selection with unique key
-    form_type = st.selectbox("Select Form Type", ["1040", "schedule1", "schedule2"], key="form_type_selectbox")
-    
-    # Form Fields based on type
+    # Form Fields
     with st.form(key='form_generator'):
-        if form_type == "1040":
-            col1, col2 = st.columns(2)
-            with col1:
-                first_name = st.text_input("First Name", "John")
-                ssn_last4 = st.text_input("Last 4 of SSN", "1234")
-                wages = st.number_input("Wages", value=50000.0)
-            with col2:
-                last_name = st.text_input("Last Name", "Doe")
-                interest = st.number_input("Interest Income", value=1000.0)
-            
-            form_data = {
+        # Form 1040 Fields
+        first_name = st.text_input("First Name", "John")
+        last_name = st.text_input("Last Name", "Doe")
+        ssn_last4 = st.text_input("Last 4 of SSN", "1234")
+        wages = st.number_input("Wages", value=50000.0)
+        interest = st.number_input("Interest Income", value=1000.0)
+
+        # Schedule 1 Fields
+        business_income = st.number_input("Business Income", value=10000.0)
+        rental_income = st.number_input("Rental Income", value=5000.0)
+
+        # Schedule 2 Fields
+        self_employment_tax = st.number_input("Self-Employment Tax", value=2000.0)
+        medicare_tax = st.number_input("Medicare Tax", value=1000.0)
+        
+        generate_button = st.form_submit_button("Generate PDF")
+
+    if generate_button:
+        # Organize data into a dictionary
+        form_data = {
+            "1040": {
                 "first_name": first_name,
                 "last_name": last_name,
                 "ssn_last4": ssn_last4,
                 "wages": wages,
                 "interest": interest
-            }
-            
-        elif form_type == "schedule1":
-            business_income = st.number_input("Business Income", value=10000.0)
-            rental_income = st.number_input("Rental Income", value=5000.0)
-            
-            form_data = {
+            },
+            "schedule1": {
                 "business_income": business_income,
                 "rental_income": rental_income
-            }
-            
-        elif form_type == "schedule2":
-            self_employment_tax = st.number_input("Self-Employment Tax", value=2000.0)
-            medicare_tax = st.number_input("Medicare Tax", value=1000.0)
-            
-            form_data = {
+            },
+            "schedule2": {
                 "self_employment_tax": self_employment_tax,
                 "medicare_tax": medicare_tax
             }
-            
-        generate_button = st.form_submit_button("Generate PDF")
-        
-    if generate_button:
+        }
+
         with st.spinner("Generating PDF..."):
             try:
-                pdf_buffer = generator.generate_pdf(form_type, form_data)
+                pdf_buffer = generator.generate_pdf(form_data)
                 if pdf_buffer:
                     # Create download button
                     b64_pdf = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
-                    filename = f"{form_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+                    filename = f"tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
                     
                     href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{filename}">Download PDF</a>'
                     st.markdown(href, unsafe_allow_html=True)
@@ -142,7 +154,6 @@ def main():
                     
                     # Save metadata
                     metadata = {
-                        "form_type": form_type,
                         "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                         "filename": filename
                     }
