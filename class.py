@@ -1,180 +1,158 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
+import io
+import base64
 
-class SimpleFormGenerator:
-    def generate_form_data(self, form_type, form_data):
-        """Generate form data in JSON format"""
-        data = {
-            "form_type": form_type,
-            "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            "data": form_data
-        }
-        return json.dumps(data, indent=2)
+try:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    REPORTLAB_INSTALLED = True
+except ImportError:
+    REPORTLAB_INSTALLED = False
+    st.error("""
+    ReportLab is not installed. Please install it using:
+    ```
+    pip install reportlab
+    ```
+    """)
+
+class PDFGenerator:
+    def generate_pdf(self, form_type, form_data):
+        if not REPORTLAB_INSTALLED:
+            st.error("Cannot generate PDF: ReportLab is not installed")
+            return None
+            
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        
+        # Common header
+        c.setFont("Helvetica-Bold", 24)
+        c.drawString(50, 750, f"Form {form_type.upper()}")
+        c.setFont("Helvetica", 12)
+        
+        if form_type == "1040":
+            self._generate_1040(c, form_data)
+        elif form_type == "schedule1":
+            self._generate_schedule1(c, form_data)
+        elif form_type == "schedule2":
+            self._generate_schedule2(c, form_data)
+            
+        c.save()
+        buffer.seek(0)
+        return buffer
+        
+    def _generate_1040(self, c, data):
+        # Personal Information
+        y = 700
+        c.drawString(50, y, "Personal Information")
+        y -= 20
+        c.drawString(50, y, f"First Name: {data['first_name']}")
+        c.drawString(300, y, f"Last Name: {data['last_name']}")
+        y -= 20
+        c.drawString(50, y, f"SSN: XXX-XX-{data['ssn_last4']}")
+        
+        # Financial Information
+        y -= 40
+        c.drawString(50, y, "Financial Information")
+        y -= 20
+        c.drawString(50, y, f"Wages: ${data['wages']:,.2f}")
+        y -= 20
+        c.drawString(50, y, f"Interest: ${data['interest']:,.2f}")
+        
+    def _generate_schedule1(self, c, data):
+        y = 700
+        c.drawString(50, y, "Additional Income")
+        y -= 20
+        c.drawString(50, y, f"Business Income: ${data['business_income']:,.2f}")
+        y -= 20
+        c.drawString(50, y, f"Rental Income: ${data['rental_income']:,.2f}")
+        
+    def _generate_schedule2(self, c, data):
+        y = 700
+        c.drawString(50, y, "Additional Taxes")
+        y -= 20
+        c.drawString(50, y, f"Self-Employment Tax: ${data['self_employment_tax']:,.2f}")
+        y -= 20
+        c.drawString(50, y, f"Medicare Tax: ${data['medicare_tax']:,.2f}")
 
 def main():
-    st.set_page_config(page_title="Tax Form Data Generator", layout="wide")
-    st.title("Tax Form Data Generator")
-
-    # Initialize generator
-    generator = SimpleFormGenerator()
-
-    # Sidebar for batch generation
-    st.sidebar.header("Batch Generation")
-    num_forms = st.sidebar.number_input("Number of Forms", min_value=1, max_value=100, value=1)
+    st.title("Tax Form PDF Generator")
     
-    # Main content
-    tab1, tab2 = st.tabs(["Single Form", "Batch Generation"])
-
-    with tab1:
-        st.header("Generate Single Form Data")
+    if not REPORTLAB_INSTALLED:
+        st.stop()
+    
+    generator = PDFGenerator()
+    
+    # Form Type Selection
+    form_type = st.selectbox("Select Form Type", ["1040", "schedule1", "schedule2"])
+    
+    # Form Fields based on type
+    with st.form(key='form_generator'):
+        if form_type == "1040":
+            col1, col2 = st.columns(2)
+            with col1:
+                first_name = st.text_input("First Name", "John")
+                ssn_last4 = st.text_input("Last 4 of SSN", "1234")
+                wages = st.number_input("Wages", value=50000.0)
+            with col2:
+                last_name = st.text_input("Last Name", "Doe")
+                interest = st.number_input("Interest Income", value=1000.0)
+            
+            form_data = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "ssn_last4": ssn_last4,
+                "wages": wages,
+                "interest": interest
+            }
+            
+        elif form_type == "schedule1":
+            business_income = st.number_input("Business Income", value=10000.0)
+            rental_income = st.number_input("Rental Income", value=5000.0)
+            
+            form_data = {
+                "business_income": business_income,
+                "rental_income": rental_income
+            }
+            
+        elif form_type == "schedule2":
+            self_employment_tax = st.number_input("Self-Employment Tax", value=2000.0)
+            medicare_tax = st.number_input("Medicare Tax", value=1000.0)
+            
+            form_data = {
+                "self_employment_tax": self_employment_tax,
+                "medicare_tax": medicare_tax
+            }
+            
+        generate_button = st.form_submit_button("Generate PDF")
         
-        # Form selection
-        form_type = st.selectbox(
-            "Select Form Type",
-            ["1040", "schedule1", "schedule2"]
-        )
-        
-        # Form data input
-        with st.form("tax_form_data"):
-            st.subheader("Form Information")
-            
-            if form_type == "1040":
-                col1, col2 = st.columns(2)
-                with col1:
-                    first_name = st.text_input("First Name", "John")
-                    ssn_last4 = st.text_input("Last 4 SSN", "1234")
-                    wages = st.number_input("Wages", 0, 1000000, 50000)
-                with col2:
-                    last_name = st.text_input("Last Name", "Doe")
-                    interest = st.number_input("Interest Income", 0, 100000, 1000)
-                
-                form_data = {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "ssn_last4": ssn_last4,
-                    "wages": wages,
-                    "interest": interest
-                }
-                
-            elif form_type == "schedule1":
-                business_income = st.number_input("Business Income", 0, 1000000, 10000)
-                rental_income = st.number_input("Rental Income", 0, 1000000, 5000)
-                
-                form_data = {
-                    "business_income": business_income,
-                    "rental_income": rental_income
-                }
-                
-            elif form_type == "schedule2":
-                self_employment_tax = st.number_input("Self-Employment Tax", 0, 100000, 2000)
-                medicare_tax = st.number_input("Additional Medicare Tax", 0, 50000, 1000)
-                
-                form_data = {
-                    "self_employment_tax": self_employment_tax,
-                    "medicare_tax": medicare_tax
-                }
-
-            submit_button = st.form_submit_button("Generate Form Data")
-
-        if submit_button:
-            # Generate JSON data
-            json_data = generator.generate_form_data(form_type, form_data)
-            
-            # Display generated data
-            st.subheader("Generated Form Data")
-            st.code(json_data, language='json')
-            
-            # Create download button for JSON
-            st.download_button(
-                "Download JSON",
-                json_data,
-                f"{form_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                "application/json"
-            )
-            
-            # Display success message
-            st.success(f"{form_type.upper()} form data generated successfully!")
-
-    with tab2:
-        st.header("Batch Generation")
-        
-        if st.button("Generate Batch"):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            # Create a DataFrame to store metadata and generated data
-            all_data = []
-            
-            for i in range(num_forms):
-                # Generate random data
-                form_type = ["1040", "schedule1", "schedule2"][i % 3]
-                
-                if form_type == "1040":
-                    form_data = {
-                        "first_name": f"User{i}",
-                        "last_name": f"Sample{i}",
-                        "ssn_last4": f"{i:04d}",
-                        "wages": 50000 + i * 1000,
-                        "interest": 1000 + i * 100
+    if generate_button:
+        with st.spinner("Generating PDF..."):
+            try:
+                pdf_buffer = generator.generate_pdf(form_type, form_data)
+                if pdf_buffer:
+                    # Create download button
+                    b64_pdf = base64.b64encode(pdf_buffer.getvalue()).decode('utf-8')
+                    filename = f"{form_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+                    
+                    href = f'<a href="data:application/pdf;base64,{b64_pdf}" download="{filename}">Download PDF</a>'
+                    st.markdown(href, unsafe_allow_html=True)
+                    st.success("PDF generated successfully!")
+                    
+                    # Save metadata
+                    metadata = {
+                        "form_type": form_type,
+                        "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        "filename": filename
                     }
-                elif form_type == "schedule1":
-                    form_data = {
-                        "business_income": 10000 + i * 500,
-                        "rental_income": 5000 + i * 200
-                    }
-                else:
-                    form_data = {
-                        "self_employment_tax": 2000 + i * 100,
-                        "medicare_tax": 1000 + i * 50
-                    }
-                
-                # Generate form data
-                json_data = generator.generate_form_data(form_type, form_data)
-                
-                # Save to list
-                all_data.append({
-                    "form_id": i + 1,
-                    "form_type": form_type,
-                    "generation_date": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    "data": json_data
-                })
-                
-                # Update progress
-                progress = (i + 1) / num_forms
-                progress_bar.progress(progress)
-                status_text.text(f"Generated {i + 1} of {num_forms} forms...")
-            
-            # Create DataFrame
-            df = pd.DataFrame(all_data)
-            
-            # Display summary
-            st.success(f"Generated {num_forms} forms successfully!")
-            st.subheader("Generation Summary")
-            st.dataframe(df[["form_id", "form_type", "generation_date"]])
-            
-            # Download options
-            st.subheader("Download Options")
-            
-            # Download all data as JSON
-            all_json = json.dumps(all_data, indent=2)
-            st.download_button(
-                "Download All Data (JSON)",
-                all_json,
-                "form_data_batch.json",
-                "application/json"
-            )
-            
-            # Download summary as CSV
-            csv = df[["form_id", "form_type", "generation_date"]].to_csv(index=False)
-            st.download_button(
-                "Download Summary (CSV)",
-                csv,
-                "form_generation_summary.csv",
-                "text/csv",
-                key='download-csv'
-            )
+                    st.json(metadata)
+                    
+            except Exception as e:
+                st.error(f"Error generating PDF: {str(e)}")
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
