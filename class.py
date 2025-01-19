@@ -124,31 +124,32 @@ def generate_random_data():
     }
 
 def main():
-    st.title("Generate 50 Separate Tax Forms PDFs")
+    st.title("Generate 150 Separate Tax Forms PDFs (50 per Year)")
     
     if not REPORTLAB_INSTALLED:
         st.stop()
     
     generator = PDFGenerator()
 
-    # Button to generate 50 PDFs for each form
-    if st.button("Generate 50 PDFs for Each Form"):
+    # Button to generate 50 PDFs for each form for three years
+    if st.button("Generate 50 PDFs for Each Form for the Past 3 Years"):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-            for i in range(1, 51):  # Generate 50 PDFs for each form
-                form_data = generate_random_data()  # Generate random data for each form
-                
-                # Generate Form 1040 PDFs
-                pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040")
-                zip_file.writestr(f"form_1040_{i}.pdf", pdf_buffer_1040.getvalue())
-                
-                # Generate Schedule 1 PDFs
-                pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1")
-                zip_file.writestr(f"schedule1_{i}.pdf", pdf_buffer_schedule1.getvalue())
-                
-                # Generate Schedule 2 PDFs
-                pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2")
-                zip_file.writestr(f"schedule2_{i}.pdf", pdf_buffer_schedule2.getvalue())
+            for year in range(2022, 2025):  # Loop for the past 3 years (2022, 2023, 2024)
+                for i in range(1, 51):  # Generate 50 PDFs for each year
+                    form_data = generate_random_data()  # Generate random data for each form
+                    
+                    # Generate Form 1040 PDFs
+                    pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040")
+                    zip_file.writestr(f"form_1040_{year}_{i}.pdf", pdf_buffer_1040.getvalue())
+                    
+                    # Generate Schedule 1 PDFs
+                    pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1")
+                    zip_file.writestr(f"schedule1_{year}_{i}.pdf", pdf_buffer_schedule1.getvalue())
+                    
+                    # Generate Schedule 2 PDFs
+                    pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2")
+                    zip_file.writestr(f"schedule2_{year}_{i}.pdf", pdf_buffer_schedule2.getvalue())
 
         zip_buffer.seek(0)
         b64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
@@ -157,7 +158,7 @@ def main():
         # Create download link for the ZIP file
         href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download 150 PDFs</a>'
         st.markdown(href, unsafe_allow_html=True)
-        st.success("50 PDFs for each form generated successfully!")
+        st.success("50 PDFs for each form, for the past 3 years, generated successfully!")
 
 if __name__ == "__main__":
     main()
