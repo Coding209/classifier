@@ -5,24 +5,14 @@ from datetime import datetime
 import io
 import base64
 import zipfile
-from PyPDF2 import PdfMerger  # Ensure PyPDF2 is installed
-import os
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
-try:
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import letter
-    REPORTLAB_INSTALLED = True
-except ImportError:
-    REPORTLAB_INSTALLED = False
-    st.error("""
-    ReportLab is not installed. Please install it using:
-    ```
-    pip install reportlab
-    ```
-    """)
+# Ensure reportlab is installed
+REPORTLAB_INSTALLED = True
 
 class PDFGenerator:
-    def generate_pdf(self, form_data, form_number, form_type, year):
+    def generate_pdf(self, form_data, form_number, year):
         if not REPORTLAB_INSTALLED:
             st.error("Cannot generate PDF: ReportLab is not installed")
             return None
@@ -30,28 +20,26 @@ class PDFGenerator:
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
         
-        # Common header for all forms
-        c.setFont("Helvetica-Bold", 24)
-        c.drawString(50, 750, f"Tax Form {form_type} - {form_number}")
-        c.setFont("Helvetica", 10)
-
         # Generate Form 1040
-        if form_type == "1040":
-            self._generate_1040(c, form_data, year)
+        self._generate_1040(c, form_data, form_number, year)
+        
+        # Add page break between forms
+        c.showPage()
         
         # Generate Schedule 1
-        elif form_type == "schedule1":
-            self._generate_schedule1(c, form_data, year)
+        self._generate_schedule1(c, form_data, form_number, year)
+        
+        # Add page break between forms
+        c.showPage()
         
         # Generate Schedule 2
-        elif form_type == "schedule2":
-            self._generate_schedule2(c, form_data, year)
+        self._generate_schedule2(c, form_data, form_number, year)
         
         c.save()
         buffer.seek(0)
         return buffer
         
-    def _generate_1040(self, c, data, year):
+    def _generate_1040(self, c, data, form_number, year):
         # Header Section
         c.setFont("Helvetica-Bold", 12)
         c.drawString(50, 730, f"Form 1040 - U.S. Individual Income Tax Return")
@@ -110,7 +98,7 @@ class PDFGenerator:
         c.drawString(50, 410, f"Signature: ______________________")
         c.drawString(50, 390, f"Date: {datetime.now().strftime('%m/%d/%Y')}")
         
-    def _generate_schedule1(self, c, data, year):
+    def _generate_schedule1(self, c, data, form_number, year):
         y = 700
         c.setFont("Helvetica-Bold", 12)
         c.drawString(50, y, f"Schedule 1: Additional Income and Adjustments to Income ({year})")
@@ -124,7 +112,7 @@ class PDFGenerator:
         y -= 20
         c.drawString(50, y, f"Rental Income: ${data['rental_income']:,.2f}")
         
-    def _generate_schedule2(self, c, data, year):
+    def _generate_schedule2(self, c, data, form_number, year):
         y = 700
         c.setFont("Helvetica-Bold", 12)
         c.drawString(50, y, f"Schedule 2: Additional Taxes ({year})")
@@ -184,17 +172,9 @@ def main():
                 for i in range(1, 51):  # Generate 50 PDFs for each year
                     form_data = generate_random_data()  # Generate random data for each form
                     
-                    # Generate Form 1040 PDF
-                    pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040", year)
-                    zip_file.writestr(f"form_1040_{year}_{i}.pdf", pdf_buffer_1040.getvalue())
-                    
-                    # Generate Schedule 1 PDF
-                    pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1", year)
-                    zip_file.writestr(f"schedule1_{year}_{i}.pdf", pdf_buffer_schedule1.getvalue())
-                    
-                    # Generate Schedule 2 PDF
-                    pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2", year)
-                    zip_file.writestr(f"schedule2_{year}_{i}.pdf", pdf_buffer_schedule2.getvalue())
+                    # Generate PDF with all three forms
+                    pdf_buffer = generator.generate_pdf(form_data["1040"], i, year)
+                    zip_file.writestr(f"tax_form_{year}_{i}.pdf", pdf_buffer.getvalue())
 
         zip_buffer.seek(0)
         b64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
@@ -203,8 +183,7 @@ def main():
         # Create download link for the ZIP file
         href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download 150 PDFs</a>'
         st.markdown(href, unsafe_allow_html=True)
-        st.success("50 PDFs for each form, for the past 3 years, generated successfully!")
+        st.success("50 PDFs for each year generated successfully!")
 
 if __name__ == "__main__":
     main()
-
