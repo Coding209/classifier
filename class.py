@@ -169,7 +169,7 @@ def generate_random_data():
     }
 
 def main():
-    st.title("Generate All Forms Merged into a Single PDF")
+    st.title("Generate 50 Separate Tax Forms PDFs (Form 1040, Schedule 1, and Schedule 2 per Case)")
     
     if not REPORTLAB_INSTALLED:
         st.stop()
@@ -177,40 +177,33 @@ def main():
     generator = PDFGenerator()
 
     # Button to generate 50 PDFs for each form for three years
-    if st.button("Generate Merged PDFs for Each Year"):
+    if st.button("Generate 50 PDFs for Each Year"):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for year in range(2022, 2025):  # Loop for the past 3 years (2022, 2023, 2024)
-                merger = PdfMerger()  # Initialize PDF merger for this year
-                for i in range(1, 51):  # Generate 50 merged PDFs for each year
+                for i in range(1, 51):  # Generate 50 PDFs for each year
                     form_data = generate_random_data()  # Generate random data for each form
                     
                     # Generate Form 1040 PDF
                     pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040", year)
-                    merger.append(pdf_buffer_1040)
+                    zip_file.writestr(f"form_1040_{year}_{i}.pdf", pdf_buffer_1040.getvalue())
                     
                     # Generate Schedule 1 PDF
                     pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1", year)
-                    merger.append(pdf_buffer_schedule1)
+                    zip_file.writestr(f"schedule1_{year}_{i}.pdf", pdf_buffer_schedule1.getvalue())
                     
                     # Generate Schedule 2 PDF
                     pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2", year)
-                    merger.append(pdf_buffer_schedule2)
-                
-                # Save the merged PDF for the current year
-                merged_pdf = io.BytesIO()
-                merger.write(merged_pdf)
-                merged_pdf.seek(0)
-                zip_file.writestr(f"merged_tax_forms_{year}.pdf", merged_pdf.read())
+                    zip_file.writestr(f"schedule2_{year}_{i}.pdf", pdf_buffer_schedule2.getvalue())
 
         zip_buffer.seek(0)
         b64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
-        zip_filename = f"merged_tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+        zip_filename = f"tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
 
         # Create download link for the ZIP file
-        href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download Merged PDF Forms</a>'
+        href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download 150 PDFs</a>'
         st.markdown(href, unsafe_allow_html=True)
-        st.success("50 merged PDFs for each year generated successfully!")
+        st.success("50 PDFs for each form, for the past 3 years, generated successfully!")
 
 if __name__ == "__main__":
     main()
