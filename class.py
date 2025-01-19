@@ -5,7 +5,7 @@ from datetime import datetime
 import io
 import base64
 import zipfile
-from PyPDF2 import PdfMerger
+from PyPDF2 import PdfMerger  # Ensure PyPDF2 is installed
 import os
 
 try:
@@ -185,4 +185,32 @@ def main():
                 for i in range(1, 51):  # Generate 50 merged PDFs for each year
                     form_data = generate_random_data()  # Generate random data for each form
                     
-  
+                    # Generate Form 1040 PDF
+                    pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040", year)
+                    merger.append(pdf_buffer_1040)
+                    
+                    # Generate Schedule 1 PDF
+                    pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1", year)
+                    merger.append(pdf_buffer_schedule1)
+                    
+                    # Generate Schedule 2 PDF
+                    pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2", year)
+                    merger.append(pdf_buffer_schedule2)
+                
+                # Save the merged PDF for the current year
+                merged_pdf = io.BytesIO()
+                merger.write(merged_pdf)
+                merged_pdf.seek(0)
+                zip_file.writestr(f"merged_tax_forms_{year}.pdf", merged_pdf.read())
+
+        zip_buffer.seek(0)
+        b64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
+        zip_filename = f"merged_tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+
+        # Create download link for the ZIP file
+        href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download Merged PDF Forms</a>'
+        st.markdown(href, unsafe_allow_html=True)
+        st.success("50 merged PDFs for each year generated successfully!")
+
+if __name__ == "__main__":
+    main()
