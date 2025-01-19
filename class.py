@@ -21,19 +21,19 @@ class PDFGenerator:
         c = canvas.Canvas(buffer, pagesize=letter)
         
         # Generate Form 1040
-        self._generate_1040(c, form_data, form_number, year)
+        self._generate_1040(c, form_data["1040"], form_number, year)
         
         # Add page break between forms
         c.showPage()
         
         # Generate Schedule 1
-        self._generate_schedule1(c, form_data, form_number, year)
+        self._generate_schedule1(c, form_data["schedule1"], form_number, year)
         
         # Add page break between forms
         c.showPage()
         
         # Generate Schedule 2
-        self._generate_schedule2(c, form_data, form_number, year)
+        self._generate_schedule2(c, form_data["schedule2"], form_number, year)
         
         c.save()
         buffer.seek(0)
@@ -173,7 +173,7 @@ def main():
                     form_data = generate_random_data()  # Generate random data for each form
                     
                     # Generate PDF with all three forms
-                    pdf_buffer = generator.generate_pdf(form_data["1040"], i, year)
+                    pdf_buffer = generator.generate_pdf(form_data, i, year)
                     zip_file.writestr(f"tax_form_{year}_{i}.pdf", pdf_buffer.getvalue())
 
         zip_buffer.seek(0)
