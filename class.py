@@ -5,6 +5,7 @@ from datetime import datetime
 import io
 import base64
 import zipfile
+from PyPDF2 import PdfMerger
 import os
 
 try:
@@ -168,7 +169,7 @@ def generate_random_data():
     }
 
 def main():
-    st.title("Generate 150 Separate Tax Forms PDFs (50 per Year)")
+    st.title("Generate Merged Tax Forms PDFs (50 Forms Merged Together)")
     
     if not REPORTLAB_INSTALLED:
         st.stop()
@@ -176,33 +177,12 @@ def main():
     generator = PDFGenerator()
 
     # Button to generate 50 PDFs for each form for three years
-    if st.button("Generate 50 PDFs for Each Form for the Past 3 Years"):
+    if st.button("Generate 50 Merged PDFs for Each Year"):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for year in range(2022, 2025):  # Loop for the past 3 years (2022, 2023, 2024)
-                for i in range(1, 51):  # Generate 50 PDFs for each year
+                merger = PdfMerger()  # Initialize PDF merger for this year
+                for i in range(1, 51):  # Generate 50 merged PDFs for each year
                     form_data = generate_random_data()  # Generate random data for each form
                     
-                    # Generate Form 1040 PDFs
-                    pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040", year)
-                    zip_file.writestr(f"form_1040_{year}_{i}.pdf", pdf_buffer_1040.getvalue())
-                    
-                    # Generate Schedule 1 PDFs
-                    pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1", year)
-                    zip_file.writestr(f"schedule1_{year}_{i}.pdf", pdf_buffer_schedule1.getvalue())
-                    
-                    # Generate Schedule 2 PDFs
-                    pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2", year)
-                    zip_file.writestr(f"schedule2_{year}_{i}.pdf", pdf_buffer_schedule2.getvalue())
-
-        zip_buffer.seek(0)
-        b64_zip = base64.b64encode(zip_buffer.read()).decode("utf-8")
-        zip_filename = f"tax_forms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-
-        # Create download link for the ZIP file
-        href = f'<a href="data:application/zip;base64,{b64_zip}" download="{zip_filename}">Download 150 PDFs</a>'
-        st.markdown(href, unsafe_allow_html=True)
-        st.success("50 PDFs for each form, for the past 3 years, generated successfully!")
-
-if __name__ == "__main__":
-    main()
+  
