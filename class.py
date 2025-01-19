@@ -32,27 +32,18 @@ class PDFGenerator:
         # Common header for all forms
         c.setFont("Helvetica-Bold", 24)
         c.drawString(50, 750, f"Tax Form {form_type} - {form_number}")
-        c.setFont("Helvetica", 12)
+        c.setFont("Helvetica", 10)
 
         # Generate Form 1040
         if form_type == "1040":
-            c.setFont("Helvetica-Bold", 18)
-            c.drawString(50, 730, "Form 1040")
-            c.setFont("Helvetica", 12)
             self._generate_1040(c, form_data)
         
         # Generate Schedule 1
         elif form_type == "schedule1":
-            c.setFont("Helvetica-Bold", 18)
-            c.drawString(50, 730, "Schedule 1")
-            c.setFont("Helvetica", 12)
             self._generate_schedule1(c, form_data)
         
         # Generate Schedule 2
         elif form_type == "schedule2":
-            c.setFont("Helvetica-Bold", 18)
-            c.drawString(50, 730, "Schedule 2")
-            c.setFont("Helvetica", 12)
             self._generate_schedule2(c, form_data)
         
         c.save()
@@ -60,36 +51,75 @@ class PDFGenerator:
         return buffer
         
     def _generate_1040(self, c, data):
-        # Personal Information
-        y = 700
-        c.drawString(50, y, "Personal Information")
-        y -= 20
-        c.drawString(50, y, f"First Name: {data['first_name']}")
-        c.drawString(300, y, f"Last Name: {data['last_name']}")
-        y -= 20
-        c.drawString(50, y, f"SSN: XXX-XX-{data['ssn_last4']}")
+        # Header Section
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(50, 730, "Form 1040 - U.S. Individual Income Tax Return")
         
-        # Financial Information
-        y -= 40
-        c.drawString(50, y, "Financial Information")
-        y -= 20
-        c.drawString(50, y, f"Wages: ${data['wages']:,.2f}")
-        y -= 20
-        c.drawString(50, y, f"Interest: ${data['interest']:,.2f}")
+        # Filing Status Section
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 710, "Filing Status:")
+        c.drawString(150, 710, f"Single: {random.choice([True, False])}")
+        c.drawString(150, 690, f"Married: {random.choice([True, False])}")
+        
+        # Personal Information Section
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(50, 670, "Personal Information")
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 650, f"First Name: {data['first_name']}")
+        c.drawString(50, 630, f"Last Name: {data['last_name']}")
+        c.drawString(50, 610, f"SSN: XXX-XX-{data['ssn_last4']}")
+        
+        # Income Section
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(50, 590, "Income")
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 570, f"Wages: ${data['wages']:,.2f}")
+        c.drawString(50, 550, f"Interest: ${data['interest']:,.2f}")
+        
+        # Deductions Section
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(50, 530, "Deductions")
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 510, f"Standard Deduction: ${random.randint(12000, 25000)}")
+        
+        # Taxes and Credits Section
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(50, 490, "Taxes and Credits")
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 470, f"Taxable Income: ${data['wages'] + data['interest']:,.2f}")
+        
+        # Signature Section
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(50, 450, "Signature")
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 430, f"Signature: ______________________")
+        c.drawString(50, 410, f"Date: {datetime.now().strftime('%m/%d/%Y')}")
         
     def _generate_schedule1(self, c, data):
         y = 700
-        c.drawString(50, y, "Additional Income")
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(50, y, "Schedule 1: Additional Income and Adjustments to Income")
+        
+        # Business Income
         y -= 20
+        c.setFont("Helvetica", 10)
         c.drawString(50, y, f"Business Income: ${data['business_income']:,.2f}")
+        
+        # Rental Income
         y -= 20
         c.drawString(50, y, f"Rental Income: ${data['rental_income']:,.2f}")
         
     def _generate_schedule2(self, c, data):
         y = 700
-        c.drawString(50, y, "Additional Taxes")
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(50, y, "Schedule 2: Additional Taxes")
+        
+        # Self-Employment Tax
         y -= 20
+        c.setFont("Helvetica", 10)
         c.drawString(50, y, f"Self-Employment Tax: ${data['self_employment_tax']:,.2f}")
+        
+        # Medicare Tax
         y -= 20
         c.drawString(50, y, f"Medicare Tax: ${data['medicare_tax']:,.2f}")
 
