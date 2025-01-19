@@ -21,7 +21,7 @@ except ImportError:
     """)
 
 class PDFGenerator:
-    def generate_pdf(self, form_data, form_number, form_type):
+    def generate_pdf(self, form_data, form_number, form_type, year):
         if not REPORTLAB_INSTALLED:
             st.error("Cannot generate PDF: ReportLab is not installed")
             return None
@@ -36,69 +36,77 @@ class PDFGenerator:
 
         # Generate Form 1040
         if form_type == "1040":
-            self._generate_1040(c, form_data)
+            self._generate_1040(c, form_data, year)
         
         # Generate Schedule 1
         elif form_type == "schedule1":
-            self._generate_schedule1(c, form_data)
+            self._generate_schedule1(c, form_data, year)
         
         # Generate Schedule 2
         elif form_type == "schedule2":
-            self._generate_schedule2(c, form_data)
+            self._generate_schedule2(c, form_data, year)
         
         c.save()
         buffer.seek(0)
         return buffer
         
-    def _generate_1040(self, c, data):
+    def _generate_1040(self, c, data, year):
         # Header Section
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, 730, "Form 1040 - U.S. Individual Income Tax Return")
+        c.drawString(50, 730, f"Form 1040 - U.S. Individual Income Tax Return")
+        
+        # Tax Year Field
+        c.setFont("Helvetica", 10)
+        c.drawString(50, 710, f"Tax Year: {year}")
         
         # Filing Status Section
         c.setFont("Helvetica", 10)
-        c.drawString(50, 710, "Filing Status:")
-        c.drawString(150, 710, f"Single: {random.choice([True, False])}")
-        c.drawString(150, 690, f"Married: {random.choice([True, False])}")
+        c.drawString(50, 690, "Filing Status:")
+        c.drawString(150, 690, f"Single: {random.choice([True, False])}")
+        c.drawString(150, 670, f"Married: {random.choice([True, False])}")
         
         # Personal Information Section
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 670, "Personal Information")
+        c.drawString(50, 650, "Personal Information")
         c.setFont("Helvetica", 10)
-        c.drawString(50, 650, f"First Name: {data['first_name']}")
-        c.drawString(50, 630, f"Last Name: {data['last_name']}")
-        c.drawString(50, 610, f"SSN: XXX-XX-{data['ssn_last4']}")
+        c.drawString(50, 630, f"First Name: {data['first_name']}")
+        c.drawString(50, 610, f"Last Name: {data['last_name']}")
+        c.drawString(50, 590, f"SSN: XXX-XX-{data['ssn_last4']}")
         
         # Income Section
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 590, "Income")
+        c.drawString(50, 570, "Income")
         c.setFont("Helvetica", 10)
-        c.drawString(50, 570, f"Wages: ${data['wages']:,.2f}")
-        c.drawString(50, 550, f"Interest: ${data['interest']:,.2f}")
-        
+        c.drawString(50, 550, f"Wages: ${data['wages']:,.2f}")
+        c.drawString(50, 530, f"Interest: ${data['interest']:,.2f}")
+
         # Deductions Section
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 530, "Deductions")
+        c.drawString(50, 510, "Deductions")
         c.setFont("Helvetica", 10)
-        c.drawString(50, 510, f"Standard Deduction: ${random.randint(12000, 25000)}")
+        if year == 2023:
+            standard_deduction = 12950
+        elif year == 2024:
+            standard_deduction = 13000  # Hypothetical increase for 2024
+        c.drawString(50, 490, f"Standard Deduction for {year}: ${standard_deduction}")
         
         # Taxes and Credits Section
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 490, "Taxes and Credits")
+        c.drawString(50, 470, "Taxes and Credits")
         c.setFont("Helvetica", 10)
-        c.drawString(50, 470, f"Taxable Income: ${data['wages'] + data['interest']:,.2f}")
+        c.drawString(50, 450, f"Taxable Income: ${data['wages'] + data['interest']:,.2f}")
         
         # Signature Section
         c.setFont("Helvetica-Bold", 10)
-        c.drawString(50, 450, "Signature")
+        c.drawString(50, 430, "Signature")
         c.setFont("Helvetica", 10)
-        c.drawString(50, 430, f"Signature: ______________________")
-        c.drawString(50, 410, f"Date: {datetime.now().strftime('%m/%d/%Y')}")
+        c.drawString(50, 410, f"Signature: ______________________")
+        c.drawString(50, 390, f"Date: {datetime.now().strftime('%m/%d/%Y')}")
         
-    def _generate_schedule1(self, c, data):
+    def _generate_schedule1(self, c, data, year):
         y = 700
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, y, "Schedule 1: Additional Income and Adjustments to Income")
+        c.drawString(50, y, f"Schedule 1: Additional Income and Adjustments to Income ({year})")
         
         # Business Income
         y -= 20
@@ -109,10 +117,10 @@ class PDFGenerator:
         y -= 20
         c.drawString(50, y, f"Rental Income: ${data['rental_income']:,.2f}")
         
-    def _generate_schedule2(self, c, data):
+    def _generate_schedule2(self, c, data, year):
         y = 700
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, y, "Schedule 2: Additional Taxes")
+        c.drawString(50, y, f"Schedule 2: Additional Taxes ({year})")
         
         # Self-Employment Tax
         y -= 20
@@ -170,15 +178,15 @@ def main():
                     form_data = generate_random_data()  # Generate random data for each form
                     
                     # Generate Form 1040 PDFs
-                    pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040")
+                    pdf_buffer_1040 = generator.generate_pdf(form_data["1040"], i, "1040", year)
                     zip_file.writestr(f"form_1040_{year}_{i}.pdf", pdf_buffer_1040.getvalue())
                     
                     # Generate Schedule 1 PDFs
-                    pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1")
+                    pdf_buffer_schedule1 = generator.generate_pdf(form_data["schedule1"], i, "schedule1", year)
                     zip_file.writestr(f"schedule1_{year}_{i}.pdf", pdf_buffer_schedule1.getvalue())
                     
                     # Generate Schedule 2 PDFs
-                    pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2")
+                    pdf_buffer_schedule2 = generator.generate_pdf(form_data["schedule2"], i, "schedule2", year)
                     zip_file.writestr(f"schedule2_{year}_{i}.pdf", pdf_buffer_schedule2.getvalue())
 
         zip_buffer.seek(0)
