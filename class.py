@@ -169,7 +169,7 @@ def generate_random_data():
     }
 
 def main():
-    st.title("Generate Merged Tax Forms PDFs (50 Forms Merged Together)")
+    st.title("Generate All Forms Merged into a Single PDF")
     
     if not REPORTLAB_INSTALLED:
         st.stop()
@@ -177,7 +177,7 @@ def main():
     generator = PDFGenerator()
 
     # Button to generate 50 PDFs for each form for three years
-    if st.button("Generate 50 Merged PDFs for Each Year"):
+    if st.button("Generate Merged PDFs for Each Year"):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
             for year in range(2022, 2025):  # Loop for the past 3 years (2022, 2023, 2024)
