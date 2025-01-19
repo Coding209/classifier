@@ -84,10 +84,16 @@ class PDFGenerator:
         c.setFont("Helvetica-Bold", 10)
         c.drawString(50, 510, "Deductions")
         c.setFont("Helvetica", 10)
+
+        # Set standard deduction for each year
         if year == 2023:
             standard_deduction = 12950
         elif year == 2024:
             standard_deduction = 13000  # Hypothetical increase for 2024
+        else:
+            # Default value or handle for other years
+            standard_deduction = 12500  # Example default value
+
         c.drawString(50, 490, f"Standard Deduction for {year}: ${standard_deduction}")
         
         # Taxes and Credits Section
