@@ -21,19 +21,19 @@ def main():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # Input field
-    user_input = st.text_input("You:", key="user_input")
+    # Input field with default value workaround
+    if "input_text" not in st.session_state:
+        st.session_state.input_text = ""
+
+    user_input = st.text_input("You:", value=st.session_state.input_text, key="input_text")
 
     # Handle input
     if st.button("Send"):
-        if user_input:
-            st.session_state.chat_history.append(("You", user_input))
-            bot_reply = get_bot_response(user_input)
+        if user_input.strip():
+            st.session_state.chat_history.append(("You", user_input.strip()))
+            bot_reply = get_bot_response(user_input.strip())
             st.session_state.chat_history.append(("Bot", bot_reply))
-
-            # Clear input using rerun
-            del st.session_state["user_input"]
-            st.experimental_rerun()
+            st.session_state.input_text = ""  # reset value instead of deleting
 
     # Display chat
     for sender, message in st.session_state.chat_history:
@@ -44,3 +44,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
