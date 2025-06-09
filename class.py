@@ -18,24 +18,21 @@ def main():
     st.title("🎓 University Application Chatbot")
     st.markdown("Ask me anything about applying to the university!")
 
+    # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # Input field with default value workaround
-    if "input_text" not in st.session_state:
-        st.session_state.input_text = ""
+    # Use a form to prevent session state conflict
+    with st.form("chat_form", clear_on_submit=True):
+        user_input = st.text_input("You:", placeholder="Type your message here...")
+        submitted = st.form_submit_button("Send")
 
-    user_input = st.text_input("You:", value=st.session_state.input_text, key="input_text")
+    if submitted and user_input.strip():
+        st.session_state.chat_history.append(("You", user_input.strip()))
+        bot_reply = get_bot_response(user_input.strip())
+        st.session_state.chat_history.append(("Bot", bot_reply))
 
-    # Handle input
-    if st.button("Send"):
-        if user_input.strip():
-            st.session_state.chat_history.append(("You", user_input.strip()))
-            bot_reply = get_bot_response(user_input.strip())
-            st.session_state.chat_history.append(("Bot", bot_reply))
-            st.session_state.input_text = ""  # reset value instead of deleting
-
-    # Display chat
+    # Display chat history
     for sender, message in st.session_state.chat_history:
         if sender == "You":
             st.markdown(f"**{sender}:** {message}")
