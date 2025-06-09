@@ -1,8 +1,6 @@
 import streamlit as st
-import requests
 
 def get_bot_response(user_message):
-    # 🔁 Replace this logic with your actual Rasa or AI API
     user_message = user_message.lower()
     if "deadline" in user_message:
         return "📅 The application deadline for Fall 2025 is January 15."
@@ -20,29 +18,33 @@ def main():
     st.title("🎓 University Application Chatbot")
     st.markdown("Ask me anything about applying to the university!")
 
-    # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
 
-    # User input
+    # Input field
     user_input = st.text_input("You:", key="user_input")
 
+    # Handle input
     if st.button("Send"):
         if user_input:
-            # Append user message
             st.session_state.chat_history.append(("You", user_input))
-
-            # Get bot response
             bot_reply = get_bot_response(user_input)
             st.session_state.chat_history.append(("Bot", bot_reply))
 
-            # Clear input
-            st.session_state.user_input = ""
+            # Clear input using rerun
+            del st.session_state["user_input"]
+            st.experimental_rerun()
 
-    # Show chat history
+    # Display chat
     for sender, message in st.session_state.chat_history:
         if sender == "You":
             st.markdown(f"**{sender}:** {message}")
+        else:
+            st.markdown(f"<div style='text-align:right'><b>{sender}:</b> {message}</div>", unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
+
         else:
             st.markdown(f"<div style='text-align:right'><b>{sender}:</b> {message}</div>", unsafe_allow_html=True)
 
