@@ -44,9 +44,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-        else:
-            st.markdown(f"<div style='text-align:right'><b>{sender}:</b> {message}</div>", unsafe_allow_html=True)
-
-if __name__ == "__main__":
-    main()
