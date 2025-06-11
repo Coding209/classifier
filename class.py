@@ -1,55 +1,28 @@
 import streamlit as st
 
-# ---------------- Bot Logic ---------------- #
-def get_bot_response(user_message):
-    user_message = user_message.lower()
-    if "deadline" in user_message:
-        return "📅 The application deadline for Fall 2025 is January 15."
-    elif "documents" in user_message:
-        return "📝 You'll need transcripts, a personal statement, and recommendation letters."
-    elif "apply" in user_message:
-        return "🧭 To apply, visit our website, choose your program, and fill out the online application form."
-    else:
-        return "🤖 Sorry, I didn't understand. Could you rephrase your question?"
+# Page config
+st.set_page_config(layout="wide")
 
-# ---------------- Main App ---------------- #
-def main():
-    st.set_page_config(page_title="🎓 University Chatbot", layout="centered")
-    st.markdown("<h2 style='text-align: center;'>🎓 University Application Chatbot</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Ask me anything about applying to the university!</p>", unsafe_allow_html=True)
+# Layout
+col1, col2 = st.columns([1, 2])
 
-    # Initialize chat history
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
+# Left: Static image
+with col1:
+    st.image("image.png")
 
-    # Display chat history with avatars
-    for sender, message in st.session_state.chat_history:
-        if sender == "You":
-            st.markdown(f"""
-                <div style='display: flex; align-items: center; margin-bottom: 10px;'>
-                    <div style='font-size: 20px; margin-right: 8px;'>🧑</div>
-                    <div style='background-color: #e1f5fe; padding: 10px; border-radius: 10px;'>{message}</div>
-                </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-                <div style='display: flex; align-items: center; margin-bottom: 10px; justify-content: flex-end;'>
-                    <div style='background-color: #fce4ec; padding: 10px; border-radius: 10px; margin-right: 8px;'>{message}</div>
-                    <div style='font-size: 20px;'>🎓</div>
-                </div>
-            """, unsafe_allow_html=True)
+# Right: Simple chatbot
+with col2:
+    st.title("Chatbot")
 
-    # Input box (within form for safe clearing)
-    with st.form("chat_form", clear_on_submit=True):
-        user_input = st.text_input("Enter your message here...", placeholder="Type here and press Send")
-        submitted = st.form_submit_button("Send")
+    if "chat" not in st.session_state:
+        st.session_state.chat = []
 
-    if submitted and user_input.strip():
-        st.session_state.chat_history.append(("You", user_input.strip()))
-        bot_reply = get_bot_response(user_input.strip())
-        st.session_state.chat_history.append(("Bot", bot_reply))
+    user_input = st.text_input("You:", key="input")
 
-if __name__ == "__main__":
-    main()
+    if user_input:
+        st.session_state.chat.append(("You", user_input))
+        bot_reply = f"You said: {user_input}"
+        st.session_state.chat.append(("Bot", bot_reply))
 
-
+    for sender, msg in st.session_state.chat:
+        st.write(f"**{sender}:** {msg}")
